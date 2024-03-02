@@ -7,19 +7,20 @@ const SocketMiddleware = async (socket, next) => {
 	if (clientID) {
 		const query = {
 			name: "set-socket",
-			text: "update users_info set socket_id = $1, onlinestatus=true where user_id = $2",
+			text: "update user_info set chat_socket_id = $1, active_status=true where user_id = $2",
 			values: [socket.id, clientID],
 		};
 		const query2 = {
 			name: "notify-online",
-			text: " select user_id, onlinestatus, socket_id from users_info where user_id != $1 and socket_id notnull",
+			text: " select user_id, active_status, chat_socket_id from user_info where user_id != $1 and chat_socket_id notnull",
 			values: [clientID],
 		};
 		try {
 			const data = await queryDatabase(query);
 			const data2 = await queryDatabase(query2);
+			// console.log("connection", data2)
 			data2.forEach((item) =>
-				socketIO.to(item.socket_id).emit("online-status", {
+				socketIO.to(item.chat_socket_id).emit("online-status", {
 					recipientID: clientID,
 					onlinestatus: true,
 				})
@@ -36,13 +37,14 @@ const SocketMiddleware = async (socket, next) => {
 const SocketConnection = (socket) => {
 	socket.on(
 		"private message",
-		({ recipientID, message, userId, type, username, avatar }) => {
+		({ recipientID, message, userId, type, username, avatar , orgId}) => {
 			if (type == "normal") {
 				console.log("emits");
-				PrivateMessage({ recipientID, message, userId });
+				PrivateMessage({ recipientID, message, userId , orgId});
 			} else {
 				GroupMessage({
 					recipientID,
+					orgId,
 					userId,
 					message,
 					username,
@@ -55,6 +57,7 @@ const SocketConnection = (socket) => {
 		console.log("temperary checking");
 	});
 	socket.on("disconnect", () => {
+		console.log("disconnect")
 		const clientID = socket.handshake.auth.clientID;
 		if (clientID) {
 			DisconnectSocket(clientID);

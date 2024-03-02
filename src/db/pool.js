@@ -5,7 +5,7 @@ const pool = new pg.Pool({
 	user: DB_USER,
 	host: DB_HOST,
 	database: DB_NAME,
-	password: DB_KEY,
+	password: "sujanix#123",
 	port: DB_PORT,
 });
 

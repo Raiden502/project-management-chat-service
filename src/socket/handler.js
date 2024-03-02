@@ -7,21 +7,24 @@ const GroupMessage = async ({
 	message,
 	username,
 	avatar,
+	orgId
 }) => {
 	const query = {
 		name: "set-group-message",
-		text: "insert into messages(message_id, sender_id, group_id, message) VALUES($1, $2, $3, $4)",
+		text: "insert into messages(message_id, organization_id, sender_id, group_id, message, message_type) VALUES($1, $2, $3, $4, $5, $6)",
 		values: [
-			`${Date.now()}${Math.floor(Math.random() * 1000)}`,
+			`M_${Date.now()}${Math.floor(Math.random() * 1000)}`,
+			orgId,
 			userId,
 			recipientID,
 			message,
+			'info'
 		],
 	};
 
 	const groupquery = {
 		name: "send-group-message",
-		text: "select u.socket_id from users_info u join group_members m on m.user_id=u.user_id where m.group_id=$1 and u.socket_id!='' and u.user_id!=$2 ",
+		text: "select u.chat_socket_id from user_info u join user_group_associaton m on m.user_id=u.user_id where m.group_id=$1 and u.chat_socket_id!='' and u.user_id!=$2 ",
 		values: [recipientID, userId],
 	};
 
@@ -29,7 +32,7 @@ const GroupMessage = async ({
 		const messageInsert = await queryDatabase(query);
 		const data = await queryDatabase(groupquery);
 		data.forEach((item) =>
-			socketIO.to(item.socket_id).emit("private message", {
+			socketIO.to(item.chat_socket_id).emit("private message", {
 				userId: recipientID,
 				message: message,
 				recipientID: userId,
@@ -43,21 +46,23 @@ const GroupMessage = async ({
 	}
 };
 
-const PrivateMessage = async ({ recipientID, message, userId }) => {
+const PrivateMessage = async ({ recipientID, message, userId , orgId}) => {
 	const query = {
 		name: "set-message",
-		text: "insert into messages(message_id, sender_id, receiver_id, message) VALUES($1, $2, $3, $4)",
+		text: "insert into messages(message_id, organization_id, sender_id, reciever_id, message, message_type) VALUES($1, $2, $3, $4, $5, $6)",
 		values: [
-			`${Date.now()}${Math.floor(Math.random() * 1000)}`,
+			`M_${Date.now()}${Math.floor(Math.random() * 1000)}`,
+			orgId,
 			userId,
 			recipientID,
 			message,
+			'info',
 		],
 	};
 
 	const userquery = {
 		name: "send-message",
-		text: "select socket_id from users_info where user_id = $1 and socket_id notnull ",
+		text: "select chat_socket_id , user_name, avatar from user_info where user_id = $1 and chat_socket_id notnull ",
 		values: [recipientID],
 	};
 
@@ -65,10 +70,12 @@ const PrivateMessage = async ({ recipientID, message, userId }) => {
 		const messageInsert = await queryDatabase(query);
 		const data = await queryDatabase(userquery);
 		data.forEach((item) =>
-			socketIO.to(item.socket_id).emit("private message", {
+			socketIO.to(item.chat_socket_id).emit("private message", {
 				userId,
 				recipientID,
 				message,
+				username:item.user_name,
+				avatar: item.avatar,
 				date: new Date().toLocaleString(),
 			})
 		);
@@ -80,19 +87,19 @@ const PrivateMessage = async ({ recipientID, message, userId }) => {
 const DisconnectSocket = async (clientID) => {
 	const query = {
 		name: "set-socket-null",
-		text: "update users_info set socket_id = null, onlinestatus=false where user_id = $1",
+		text: "update user_info set chat_socket_id = null, active_status=false where user_id = $1",
 		values: [clientID],
 	};
 	const query2 = {
 		name: "notify-online-false",
-		text: " select user_id, onlinestatus, socket_id from users_info where user_id != $1 and socket_id notnull",
+		text: " select user_id, active_status, chat_socket_id from user_info where user_id != $1 and chat_socket_id notnull",
 		values: [clientID],
 	};
 	try {
 		const data = await queryDatabase(query);
 		const data2 = await queryDatabase(query2);
 		data2.forEach((item) =>
-			socketIO.to(item.socket_id).emit("online-status", {
+			socketIO.to(item.chat_socket_id).emit("online-status", {
 				recipientID: clientID,
 				onlinestatus: false,
 			})
