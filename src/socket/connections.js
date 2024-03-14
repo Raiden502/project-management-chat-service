@@ -18,7 +18,7 @@ const SocketMiddleware = async (socket, next) => {
 		try {
 			const data = await queryDatabase(query);
 			const data2 = await queryDatabase(query2);
-			// console.log("connection", data2)
+			console.log("connection", socket.id)
 			data2.forEach((item) =>
 				socketIO.to(item.chat_socket_id).emit("online-status", {
 					recipientID: clientID,
@@ -40,7 +40,7 @@ const SocketConnection = (socket) => {
 		({ recipientID, message, userId, type, username, avatar , orgId}) => {
 			if (type == "normal") {
 				console.log("emits");
-				PrivateMessage({ recipientID, message, userId , orgId});
+				PrivateMessage({ recipientID, message, userId , username, avatar, orgId});
 			} else {
 				GroupMessage({
 					recipientID,
@@ -57,7 +57,7 @@ const SocketConnection = (socket) => {
 		console.log("temperary checking");
 	});
 	socket.on("disconnect", () => {
-		console.log("disconnect")
+		console.log("disconnect", socket.id)
 		const clientID = socket.handshake.auth.clientID;
 		if (clientID) {
 			DisconnectSocket(clientID);

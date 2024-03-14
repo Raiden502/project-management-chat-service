@@ -46,7 +46,7 @@ const GroupMessage = async ({
 	}
 };
 
-const PrivateMessage = async ({ recipientID, message, userId , orgId}) => {
+const PrivateMessage = async ({ recipientID, message, userId , username, avatar, orgId}) => {
 	const query = {
 		name: "set-message",
 		text: "insert into messages(message_id, organization_id, sender_id, reciever_id, message, message_type) VALUES($1, $2, $3, $4, $5, $6)",
@@ -74,8 +74,8 @@ const PrivateMessage = async ({ recipientID, message, userId , orgId}) => {
 				userId,
 				recipientID,
 				message,
-				username:item.user_name,
-				avatar: item.avatar,
+				username,
+				avatar,
 				date: new Date().toLocaleString(),
 			})
 		);
